@@ -1,0 +1,1 @@
+python app.py --edgedata_without=edgedata_output_wout_roadworks/edgedata_0_to_3600.out.xml --edgedata_with=edgedata_output_w_roadworks/edgedata_0_to_3600.out.xml --road_network_json=tulipe_highways.net.geojson --tripinfo_with=tripinfo.withRoadworks.out.xml --tripinfo_without=tripinfo.out.xml
