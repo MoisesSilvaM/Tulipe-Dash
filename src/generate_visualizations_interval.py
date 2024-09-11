@@ -1,4 +1,5 @@
 import plotly.graph_objects as go
+import textwrap
 
 
 def generate_visualizations(street_data_without, street_data_with, traffic_3, traffic, list_timeframe_in_seconds,
@@ -25,8 +26,11 @@ def generate_figure_all(df_without, df_with, traffic_3, traffic, timeframe_from,
     figures = go.Figure()
     figures.add_trace(go.Histogram(x=df_without['mean'], name="Without deviations"))
     figures.add_trace(go.Histogram(x=df_with['mean'], name="With deviations"))
+    title = 'Frequency distribution of the results obtained by the vehicles in terms of ' + traffic_3 + ' for the time interval ' + timeframe_from + ' to ' + timeframe_to
+    wrapped_title = textwrap.wrap(title, width=70)
+    wrapped_title_with_br = '<br>'.join(wrapped_title)
     figures.update_layout(
-        title_text='Frequency distribution of the results obtained by the vehicles in terms of<br>' + traffic_3 + ' for the time interval<br>' + timeframe_from + ' to ' + timeframe_to,
+        title_text=wrapped_title_with_br,
         xaxis_title_text=traffic,  # xaxis label
         yaxis_title_text='Number of vehicles',  # yaxis label
         bargap=0.2,  # gap between bars of adjacent location coordinates
@@ -42,8 +46,11 @@ def generate_figure(df_without, df_with, traffic_3, traffic, timeframe_from, tim
     figures = go.Figure()
     figures.add_trace(go.Histogram(x=df_without['mean'], name="Without deviations"))
     figures.add_trace(go.Histogram(x=df_with['mean'], name="With deviations"))
+    title = 'Frequency distribution of the results obtained by the vehicles in terms of ' + traffic_3 + ' for the time interval ' + timeframe_from + ' to ' + timeframe_to
+    wrapped_title = textwrap.wrap(title, width=70)
+    wrapped_title_with_br = '<br>'.join(wrapped_title)
     figures.update_layout(
-        title_text='Frequency distribution of the results obtained by the vehicles in terms of<br>' + traffic_3 + ' for the time interval<br>' + timeframe_from + ' to ' + timeframe_to,
+        title_text=wrapped_title_with_br,
         xaxis_title_text=traffic,  # xaxis label
         yaxis_title_text='Number of vehicles',  # yaxis label
         bargap=0.2,  # gap between bars of adjacent location coordinates
