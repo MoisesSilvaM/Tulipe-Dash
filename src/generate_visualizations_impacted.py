@@ -1,6 +1,6 @@
 import plotly.express as px
 import datetime
-
+import textwrap
 
 def generate_visualizations(street_data_without, street_data_with, traffic_name, traffic_lowercase,  list_timeframe_in_seconds, list_timeframe_string, len_time_intervals_string, geo_data, hideout, dict_names, timeframe_from, timeframe_to):
     if bool(dict_names):
@@ -33,14 +33,16 @@ def generate_figure(street_data_without, street_data_with, traffic_name, traffic
         df['diff_dates'] = df['difference'].apply(get_copy_sec)
     index_names = df.index.values.tolist()
     list_names = []
+    title = 'Difference of the streets in terms of ' + traffic_name + ' for the time interval ' + timeframe_from + ' to ' + timeframe_to
+    wrapped_title = textwrap.wrap(title, width=70)
+    wrapped_title_with_br = '<br>'.join(wrapped_title)
     for elem in index_names:
         for i in geojson['features']:
             if i["properties"].get("id") == elem:
                 list_names.append(i["properties"].get("name") + ' (id:' + i["properties"].get("id") + ')')
     fig = px.bar(df, y='difference', x=df.index, orientation='v', text='diff_dates',
                  # color='diff_dates',
-                 title='Difference of the streets in terms of ' + traffic_name + '<br>for the time interval ' +
-                       timeframe_from + ' to ' + timeframe_to)
+                 title=wrapped_title_with_br)
     if traffic_lowercase == 'time loss (seconds)' or traffic_lowercase == 'travel time (seconds)' or traffic_lowercase == 'waiting time (seconds)':
         fig.update_traces(texttemplate='%{text}', textposition='outside')
     else:
@@ -50,6 +52,7 @@ def generate_figure(street_data_without, street_data_with, traffic_name, traffic
     fig.update_layout(template='plotly_dark', font=dict(color='#deb522'))
     fig.update_layout(xaxis=dict(tickmode='array', tickvals=df.index, ticktext=list_names))
     fig.update_layout(yaxis=dict(showticklabels=False))
+    #fig.update_layout(title_font_size = 12 + 2vw)
     return fig
 
 
@@ -70,14 +73,16 @@ def generate_figure_15_most_impacted(street_data_without, street_data_with, traf
         df['diff_dates'] = df['difference'].apply(get_copy_sec)
     index_names = df.index.values.tolist()
     list_names = []
+    title='15 most impacted streets in terms of ' + traffic_name + ' for the time interval ' + timeframe_from + ' to ' + timeframe_to
+    wrapped_title = textwrap.wrap(title, width=70)
+    wrapped_title_with_br = '<br>'.join(wrapped_title)
     for elem in index_names:
         for i in geo_data['features']:
             if i["properties"].get("id") == elem:
                 list_names.append(i["properties"].get("name") + ' (id:' + i["properties"].get("id") + ')')
     fig = px.bar(df, y='difference', x=df.index, orientation='v', text='diff_dates',
                  # color='diff_dates',
-                 title='15 most impacted steets in terms of ' + traffic_name + '<br>for the time interval ' +
-                       timeframe_from + ' to ' + timeframe_to,
+                 title=wrapped_title_with_br,
                  )
     if traffic_lowercase == 'time loss (seconds)' or traffic_lowercase == 'travel time (seconds)' or traffic_lowercase == 'waiting time (seconds)':
         fig.update_traces(texttemplate='%{text}', textposition='outside')
@@ -88,6 +93,8 @@ def generate_figure_15_most_impacted(street_data_without, street_data_with, traf
     fig.update_layout(template='plotly_dark', font=dict(color='#deb522'))
     fig.update_layout(xaxis=dict(tickmode='array', tickvals=df.index, ticktext=list_names, tickangle=90))
     fig.update_layout(yaxis=dict(showticklabels=False))
+    fig.update_layout(title={'y': 0.95, 'pad': {'b': 50}})
+    fig.update_layout(autosize=True, margin=dict(t=120))
     return fig
 
 
