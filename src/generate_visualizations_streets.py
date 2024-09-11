@@ -1,4 +1,5 @@
 import plotly.graph_objects as go
+import textwrap
 
 
 def generate_visualizations(street_data_without, street_data_with, traffic_name, traffic, dict_names,
@@ -37,9 +38,11 @@ def generate_figure1(street_data_without, street_data_with, traffic_name, traffi
     if len(list_timeframe_in_seconds) != len_time_intervals_string:
         street_data_without = street_data_without.loc[street_data_without.index.isin(list_timeframe_in_seconds)]
         street_data_with = street_data_with.loc[street_data_with.index.isin(list_timeframe_in_seconds)]
-        title = 'Comparing the ' + traffic_name + ' for the vehicles that originally <br>passed through ' + name + '<br>for the time interval ' + timeframe_from + ' to ' + timeframe_to
+        title = 'Comparing the ' + traffic_name + ' for the vehicles that originally passed through ' + name + ' for the time interval ' + timeframe_from + ' to ' + timeframe_to
     else:
-        title = 'Comparing the ' + traffic_name + ' for the vehicles that originally <br>passed through ' + name + ' <br>for all the time intervals'
+        title = 'Comparing the ' + traffic_name + ' for the vehicles that originally passed through ' + name + ' for all the time intervals'
+    wrapped_title = textwrap.wrap(title, width=70)
+    wrapped_title_with_br = '<br>'.join(wrapped_title)
     fig1.add_trace(go.Scatter(x=street_data_without.index, y=street_data_without.values,
                               mode='lines+markers',
                               name='without deviations'))
@@ -48,7 +51,7 @@ def generate_figure1(street_data_without, street_data_with, traffic_name, traffi
                               name='with deviations'))
     fig1.update_layout(yaxis_title=traffic)
     fig1.update_layout(
-        title_text=title,
+        title_text=wrapped_title_with_br,
         xaxis_title_text='Time interval',
     )
     fig1.update_layout(
@@ -79,11 +82,11 @@ def generate_figure_some(street_data_without, street_data_with, traffic_name, tr
             df_with = df_with.loc[df_with.index.isin(list_timeframe_in_seconds)]
             # index = np.where(time_intervals_seconds == timeframe_in_seconds)
             # times.append(time_intervals[1:][int(index[0])])
-            title = ('Comparing the ' + traffic_name + ('for the vehicles that originally<br>passed through some '
-                                                        'streets for the time interval ') + timeframe_from + ' to ' +
+            title = ('Comparing the ' + traffic_name + (' for the vehicles that originally passed through some streets '
+                                                        'for the time interval ') + timeframe_from + ' to ' +
                      timeframe_to)
         else:
-            title = 'Comparing the ' + traffic_name + ('for the vehicles that originally<br>passed through some '
+            title = 'Comparing the ' + traffic_name + (' for the vehicles that originally passed through some ' +
                                                        'streets for all the time intervals')
 
         fig1.add_trace(go.Scatter(x=df_without.index, y=df_without.values,
@@ -93,8 +96,10 @@ def generate_figure_some(street_data_without, street_data_with, traffic_name, tr
                                   mode='lines+markers',
                                   name=name + '<br>with deviations'))
         fig1.update_layout(yaxis_title=traffic)
+    wrapped_title = textwrap.wrap(title, width=70)
+    wrapped_title_with_br = '<br>'.join(wrapped_title)
     fig1.update_layout(
-        title_text=title,
+        title_text=wrapped_title_with_br,
         xaxis_title_text='Time interval',
     )
     fig1.update_layout(
@@ -114,10 +119,10 @@ def generate_figure_all(mean_street_data_without, mean_street_data_with, traffic
         mean_street_data_without = mean_street_data_without.loc[
             mean_street_data_without.index.isin(list_timeframe_in_seconds)]
         mean_street_data_with = mean_street_data_with.loc[mean_street_data_with.index.isin(list_timeframe_in_seconds)]
-        title = 'Comparing the average ' + traffic_name + '<br>on all the streets for the time interval<br>' + timeframe_from + ' to ' + timeframe_to
+        title = 'Comparing the average ' + traffic_name + ' on all the streets for the time interval ' + timeframe_from + ' to ' + timeframe_to
     #
     else:
-        title = 'Comparing the average ' + traffic_name + '<br>on all the streets for all the time intervals'
+        title = 'Comparing the average ' + traffic_name + ' on all the streets for all the time intervals'
     fig1 = go.Figure()
     fig1.add_trace(go.Scatter(x=mean_street_data_without.index, y=mean_street_data_without.values,
                               mode='lines+markers',
@@ -126,9 +131,11 @@ def generate_figure_all(mean_street_data_without, mean_street_data_with, traffic
                               mode='lines+markers',
                               name='with deviations'))
 
+    wrapped_title = textwrap.wrap(title, width=70)
+    wrapped_title_with_br = '<br>'.join(wrapped_title)
     fig1.update_layout(yaxis_title=traffic)
     fig1.update_layout(
-        title_text=title,
+        title_text=wrapped_title_with_br,
         xaxis_title_text='Time interval',
     )
     fig1.update_layout(
