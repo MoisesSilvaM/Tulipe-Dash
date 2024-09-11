@@ -1,5 +1,6 @@
 import plotly.express as px
 import plotly.graph_objects as go
+import textwrap
 
 
 def generate_visualizations(vehicle_data_without, vehicle_data_with, vehicle, veh_traffic):
@@ -18,8 +19,11 @@ def generate_figure1(vehicle_data_without, vehicle_data_with, veh_traffic, traff
     fig1 = go.Figure()
     fig1.add_trace(go.Histogram(x=vehicle_data_without[traffic_indicator], name="Without deviations"))
     fig1.add_trace(go.Histogram(x=vehicle_data_with[traffic_indicator], name="With deviations"))
+    title = 'Frequency distribution of the results obtained by the vehicles in terms of ' + veh_traffic + ' for the whole simulation'
+    wrapped_title = textwrap.wrap(title, width=70)
+    wrapped_title_with_br = '<br>'.join(wrapped_title)
     fig1.update_layout(
-        title_text='Frequency distribution of the results obtained by the vehicles in terms of<br>' + veh_traffic + 'for the whole simulation',
+        title_text=wrapped_title_with_br,
         # title of plot
         xaxis_title_text=veh_traffic,  # xaxis label
         yaxis_title_text='Number of vehicles',  # yaxis label
@@ -45,6 +49,7 @@ def generate_figure2(vehicle_data_without, vehicle_data_with, traffic, traffic_i
     df[value_y] = df[value_y].fillna(value=0)
 
     df = df.sort_values(by=['diff'], ascending=False).head(15)
+
     value = ''
     if traffic == 'duration':
         value = 'duration (s)'
@@ -52,16 +57,22 @@ def generate_figure2(vehicle_data_without, vehicle_data_with, traffic, traffic_i
         value = 'time loss (s)'
     if traffic == 'waitingTime':
         value = 'waiting time (s)'
+    title = '15 most impacted vehicles in terms of ' + value + ' comparing with and without deviations'
+    wrapped_title = textwrap.wrap(title, width=70)
+    wrapped_title_with_br = '<br>'.join(wrapped_title)
     fig2 = px.bar(df, y='diff', x='id', orientation='v',
                   color='diff', text='diff',
-                  title='15 most impacted vehicles in terms of ' + value + ' comparing with and without deviations',
+                  title=wrapped_title_with_br,
                   labels={'id': 'Id of the vehicles', 'diff': 'Difference in seconds'}
                   )
     if traffic == 'routeLength':
         value = 'route length (m)'
+        title = '15 most impacted vehicles in terms of ' + value + ' comparing with and without deviations'
+        wrapped_title = textwrap.wrap(title, width=70)
+        wrapped_title_with_br = '<br>'.join(wrapped_title)
         fig2 = px.bar(df, y='diff', x='id', orientation='v',
                       color='diff', text='diff',
-                      title='15 most impacted vehicles in terms of ' + value + ' comparing with and without deviations',
+                      title=wrapped_title_with_br,
                       labels={'id': 'Id of the vehicles', 'diff': 'Difference in meters'}
                       )
 
