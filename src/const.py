@@ -7,7 +7,6 @@ from dash import html, dcc
 import dash_bootstrap_components as dbc
 import os
 
-
 def detectors_out_to_table(sim_data_df, field_name):
     # parse all the intervals in the edgedata file
     traffic_indicator = "edge_" + field_name
@@ -135,9 +134,9 @@ traffic_body = html.Div([
     html.B("Occupancy: "),
     "Occupancy of the street in %. A value of 100 would indicate vehicles standing bumper to bumper on the whole street (minGap=0).",
     html.Br(),
-    html.B("TimeLoss: "), "The average time lost due to driving slower than desired (includes waitingTime).",
+    html.B("TimeLoss: "), "The average time lost due to driving slower than desired.",
     html.Br(),
-    html.Br("WaitingTime: "), "Sum of the time (in seconds) that vehicles are considered to be stopped.",
+    html.B("WaitingTime: "), "Sum of the time (in seconds) that vehicles are considered to be stopped.",
     html.Br(),
     html.B("Speed: "), "The mean speed (meters/seconds) on the street within the reported interval.",
     html.Br(),
@@ -150,21 +149,8 @@ traffic_body = html.Div([
     html.B("RouteLength: "), "The average route length.",
 ])
 
-collapse = html.Div(
+collapse_button = html.Div(
     [
-        html.Div(id='description_map_plot'),
-        dcc.Store(id='map_view_state', data={'lat': 50.83401264776447, 'lng': 4.366035991425782, 'zoom': 15}),
-        dbc.Collapse(
-            dbc.Card(
-                dbc.CardBody(
-                    html.Div([
-                        html.Div(id='map_plot'),
-                    ]), style={"padding": "0.1rem 0.1rem"}
-                ), color='#deb522'
-            ),
-            id="collapse",
-            is_open=True,
-        ),
         dbc.Button(
             "Closed streets", id="collapse-button", size="sm", className="mb-3", outline=True, color="warning",
             n_clicks=0, style={'marginTop': '1px'}),
@@ -184,6 +170,30 @@ def get_veh_traffic(traffic):
         value = 'waiting time (seconds)'
     return value
 
+def get_veh_explanation(traffic):
+    value = ''
+    if traffic == 'Duration (seconds)':
+        value = 'duration of the trips of the vehicles (seconds) '
+    if traffic == 'Route length (seconds)':
+        value = 'length of the routes (meters)'
+    if traffic == 'Time loss (seconds)':
+        value = 'time loss by the vehicles (seconds)'
+    if traffic == 'Waiting time (seconds)':
+        value = 'waiting time of the vehicles (seconds)'
+    return value
+
+def get_vehicle_name(traffic):
+    vehicle_df = ''
+    if traffic == "Duration (seconds)":
+        vehicle_df = "duration"
+    elif traffic == "Route length (meters)":
+        vehicle_df = "routeLength"
+    elif traffic == "Time loss (seconds)":
+        vehicle_df = "timeLoss"
+    elif traffic == "Waiting time (seconds)":
+        vehicle_df = "waitingTime"
+    return vehicle_df
+
 
 def get_traffic_lowercase(traffic):
     traffic_df = ''
@@ -200,7 +210,7 @@ def get_traffic_lowercase(traffic):
     elif traffic == "Speed (meters/seconds)":
         traffic_df = "speed (meters/seconds)"
     elif traffic == "Speed relative (average speed / speed limit)":
-        traffic_df = "speed relative (average speed / speed limit)"
+        traffic_df = "speed relative (average speed/speed limit)"
     elif traffic == "Sampled seconds (vehicles/seconds)":
         traffic_df = "sampled seconds (vehicles/seconds)"
     return traffic_df
@@ -248,14 +258,5 @@ def get_traffic(traffic):
     return inf
 
 
-def get_vehicle_name(traffic):
-    vehicle_df = ''
-    if traffic == "Duration (seconds)":
-        vehicle_df = "duration"
-    elif traffic == "Route length (meters)":
-        vehicle_df = "routeLength"
-    elif traffic == "Time loss (seconds)":
-        vehicle_df = "timeLoss"
-    elif traffic == "Waiting time (seconds)":
-        vehicle_df = "waitingTime"
-    return vehicle_df
+
+
