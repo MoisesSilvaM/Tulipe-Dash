@@ -1,4 +1,4 @@
-from dash import Dash, html, dcc, Input, Output, State, callback
+from dash import Dash, html, dcc, Input, Output, State, callback, dash
 import dash_bootstrap_components as dbc
 import geojson
 import dash_leaflet as dl
@@ -69,7 +69,6 @@ def define_quantile(data_diff):
     minim = data_diff.min()
     maxim = data_diff.max()
     list_intervals = [minim, p1, p2, p3, p4, maxim]
-    print(list_intervals)
     return list_intervals
 
 
@@ -188,9 +187,10 @@ app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP, dbc_css], title
 server = app.server
 dataframe_without, dataframe_with, vehicle_data_without, vehicle_data_with, road_network_json_file = read_inputs()
 
-geo_data = None
+#geo_data = None
+#dict_closeds_treets = {}
+#classes = []
 dict_names = {}
-dict_closeds_treets = {}
 time_intervals_seconds = get_time_intervals_seconds()
 time_intervals_string = get_time_intervals_string()
 time_intervals_marks = get_time_intervals_marks()
@@ -199,8 +199,6 @@ closed_roads = ["231483314", "832488061", "616545123", "150276002", "8384928", "
                 "627916937", "4726681#0"]  # This list has to come from the App (for now I left it like this)
 url = 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png'
 attribution = '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> '
-colorscale = Color_scale()
-classes = []
 
 
 @app.callback(
@@ -233,12 +231,13 @@ def update_map_plot(traffic, timeframes, view_state):
     data_diff = map_to_geojson(road_network_json_file, dataframe_without, dataframe_with, list_timeframe_in_seconds,
                                traffic_indicator)
 
+    colorscale = Color_scale()
     classes = define_quantile(data_diff)
 
     map_diff = dl.Map([
         dl.TileLayer(url=url, attribution=attribution),
         dl.GeoJSON(data=read_geojson_diff(), id="closed_roads_maps_with",
-                   hideout=dict(colorscale=Color_scale(), classes=classes, colorProp=traffic_indicator, tname=traffic,
+                   hideout=dict(colorscale=colorscale, classes=classes, colorProp=traffic_indicator, tname=traffic,
                                 closed=closed_roads),
                    style=style_color_closed, zoomToBounds=True, onEachFeature=on_each_feature_closed)
     ], center=(50.82911264776447, 4.369035991425782), zoom=14, zoomControl=False, minZoom=14,
@@ -385,6 +384,9 @@ def toggle_collapse(n, is_open):
 
 
 app.layout = html.Div([
+    dcc.Store(id='myDivInfo'),
+    dcc.Store(id='titleSizeStore', data=None),
+    dcc.Interval(id='interval-component', interval=500, n_intervals=0),
     dbc.Container([
         dbc.Row([
             dbc.Col(html.Div(id="Tulipe",
@@ -492,11 +494,52 @@ app.layout = html.Div([
                         searchable=True,
                         style={'color': 'black'}
                     ),
-                    dcc.Loading([html.Div(id='tabs-content_vehicles')], type='default', color='#deb522')
+                    dcc.Loading([html.Div(id='tabs-content_vehicles')], type='default', color='#deb522'),
                 ]), width=7)
         ])
     ], style={'backgroundColor': 'black', 'padding': '0px'})
 ], style={'backgroundColor': 'black', 'minHeight': '100vh'})
+
+
+app.clientside_callback(
+    """
+    function(n_intervals, current_data) {
+        var width = window.innerWidth;
+
+        if (current_data && current_data.width === width) {
+            return window.dash_clientside.no_update;
+        }
+        return {'width': width};
+    }
+    """,
+    Output('myDivInfo', 'data'),
+    Input('interval-component', 'n_intervals'),
+    State('myDivInfo', 'data')  # Estado para obtener el tamaño de ventana actual almacenado
+)
+
+@app.callback(
+    Output('titleSizeStore', 'data'),
+    Input('myDivInfo', 'data'),
+    State('titleSizeStore', 'data')
+)
+def update_FontSize(myDivInfo, current_title_size):
+    if myDivInfo is not None:
+        window_width = myDivInfo['width']
+        print(window_width)
+        if window_width < 800:
+            new_paragraph = 30
+        elif window_width < 1000:
+            new_paragraph = 40
+        elif window_width < 1200:
+            new_paragraph = 60
+        elif window_width < 1400:
+            new_paragraph = 70
+        else:
+            new_paragraph = 80
+
+        if new_paragraph != current_title_size:
+            return new_paragraph
+    return dash.no_update
 
 
 @app.callback(
@@ -531,27 +574,14 @@ def selected_timeframe_in_seconds(timeframe_split):
 
 
 @app.callback(
-    Output('histogram-graph', 'figure'),
-    Input('graph1', 'relayoutData')  # Escuchamos los cambios en el tamaño del gráfico
-)
-def update_graph(relayoutData):
-    print(relayoutData)
-    # Si no se ha redimensionado, establecer un tamaño por defecto
-    if relayoutData and 'xaxis.range[0]' in relayoutData:
-        window_width = relayoutData['xaxis.range[1]'] - relayoutData['xaxis.range[0]']
-    else:
-        window_width = 1000  # valor por defecto si no hay datos de tamaño
-    print(window_width)
-    # Generar la figura basada en el tamaño de la ventana
-    return read_geojson
-
-
-@app.callback(
     Output('tabs-content', 'children'),
-    [Input('traffic-dropdown', 'value'), Input('my-range-slider', 'value'), Input("geojson", "hideout"),
+    [Input('traffic-dropdown', 'value'),
+     Input('my-range-slider', 'value'),
+     Input("geojson", "hideout"),
+     Input('titleSizeStore', 'data'),
      Input("geojson", "n_clicks")]
 )
-def update_tab(traffic, timeframes, hideout, string_names):
+def update_tab(traffic, timeframes, hideout, title_size, string_names):
     list_timeframe_string = []
     list_timeframe_split = []
     list_timeframe_in_seconds = []
@@ -573,14 +603,14 @@ def update_tab(traffic, timeframes, hideout, string_names):
 
     figure_bystreets = generate_visualizations_bystreets(street_data_without, street_data_with, traffic_name, traffic,
                                                          dict_names, list_timeframe_in_seconds, list_timeframe_string,
-                                                         len_time_intervals_string, timeframe_from, timeframe_to)
+                                                         len_time_intervals_string, timeframe_from, timeframe_to, title_size)
     figure_impacted = generate_visualizations_impacted(street_data_without, street_data_with, traffic_name,
                                                        traffic_lowercase, list_timeframe_in_seconds,
                                                        list_timeframe_string, len_time_intervals_string, geo_data,
-                                                       hideout, dict_names, timeframe_from, timeframe_to)
+                                                       hideout, dict_names, timeframe_from, timeframe_to, title_size)
     figure_byinterval = generate_visualizations_byinterval(street_data_without, street_data_with, traffic_name, traffic,
                                                            list_timeframe_in_seconds, timeframe_from, timeframe_to,
-                                                           hideout, dict_names)
+                                                           hideout, dict_names, title_size)
     street_condition=""
     if bool(dict_names):
         impacted="This figure shows the difference in "+traffic_lowercase+" of the selected streets, in two scenarios: with and without deviations."
@@ -592,7 +622,7 @@ def update_tab(traffic, timeframes, hideout, string_names):
         street_condition=" The legend on the right helps to identify which line belongs to which street and condition."
     return (
         html.Div([
-            dcc.Graph(id='graph1', figure=figure_bystreets,responsive=True),
+            dcc.Graph(id='graph1', figure=figure_bystreets),
         ], style={'width': '100%', 'display': 'inline-block'}),
         html.Div(
             id="histogram_bystreet",
@@ -648,13 +678,14 @@ def update_tab(traffic, timeframes, hideout, string_names):
 
 @app.callback(
     Output('tabs-content_vehicles', 'children'),
-    [Input('vehicle-dropdown', 'value')]
+    [Input('vehicle-dropdown', 'value'),
+     Input('titleSizeStore', 'data')]
 )
-def update_tab(vehicle):
+def update_tab(vehicle, title_size):
     veh_traffic = get_veh_traffic(vehicle)
     veh_expl = get_veh_explanation(vehicle)
     figure_byvehicles = generate_visualizations_byvehicles(vehicle_data_without, vehicle_data_with,
-                                                           get_vehicle_name(vehicle), veh_traffic)
+                                                           get_vehicle_name(vehicle), veh_traffic, title_size)
     return (
         html.Div([
             dcc.Graph(id='graph4', figure=figure_byvehicles),
