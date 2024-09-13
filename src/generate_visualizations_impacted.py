@@ -2,20 +2,20 @@ import plotly.express as px
 import datetime
 import textwrap
 
-def generate_visualizations(street_data_without, street_data_with, traffic_name, traffic_lowercase,  list_timeframe_in_seconds, list_timeframe_string, len_time_intervals_string, geo_data, hideout, dict_names, timeframe_from, timeframe_to):
+def generate_visualizations(street_data_without, street_data_with, traffic_name, traffic_lowercase,  list_timeframe_in_seconds, list_timeframe_string, len_time_intervals_string, geo_data, hideout, dict_names, timeframe_from, timeframe_to, title_size):
     if bool(dict_names):
         my_list = []
         for (key, value) in hideout.items():
             for v in value:
                 my_list.append(v)
-        fig = generate_figure(street_data_without, street_data_with, traffic_name, traffic_lowercase, list_timeframe_in_seconds, timeframe_from, timeframe_to, geo_data, my_list)
+        fig = generate_figure(street_data_without, street_data_with, traffic_name, traffic_lowercase, list_timeframe_in_seconds, timeframe_from, timeframe_to, geo_data, my_list, title_size)
         return fig
     else:
-        fig = generate_figure_15_most_impacted(street_data_without, street_data_with, traffic_name, traffic_lowercase,  list_timeframe_in_seconds, list_timeframe_string, len_time_intervals_string, geo_data, timeframe_from, timeframe_to)
+        fig = generate_figure_15_most_impacted(street_data_without, street_data_with, traffic_name, traffic_lowercase,  list_timeframe_in_seconds, list_timeframe_string, len_time_intervals_string, geo_data, timeframe_from, timeframe_to, title_size)
         return fig
 
 
-def generate_figure(street_data_without, street_data_with, traffic_name, traffic_lowercase, list_timeframe_in_seconds, timeframe_from, timeframe_to, geojson, my_list):
+def generate_figure(street_data_without, street_data_with, traffic_name, traffic_lowercase, list_timeframe_in_seconds, timeframe_from, timeframe_to, geojson, my_list, title_size):
     df_without = street_data_without[street_data_without.columns.intersection(list_timeframe_in_seconds)].copy()
     df_with = street_data_with[street_data_with.columns.intersection(list_timeframe_in_seconds)].copy()
     df_without = df_without[df_without.index.isin(my_list)]
@@ -34,8 +34,15 @@ def generate_figure(street_data_without, street_data_with, traffic_name, traffic
     index_names = df.index.values.tolist()
     list_names = []
     title = 'Difference of the streets in terms of ' + traffic_name + ' for the time interval ' + timeframe_from + ' to ' + timeframe_to
-    wrapped_title = textwrap.wrap(title, width=70)
+    wrapped_title = textwrap.wrap(title, width=title_size)
     wrapped_title_with_br = '<br>'.join(wrapped_title)
+    title_font_size = 16
+    margin = 100
+    if title_size == 40:
+        margin = 140
+    if title_size == 30:
+        title_font_size = 12
+        margin = 160
     for elem in index_names:
         for i in geojson['features']:
             if i["properties"].get("id") == elem:
@@ -52,11 +59,12 @@ def generate_figure(street_data_without, street_data_with, traffic_name, traffic
     fig.update_layout(template='plotly_dark', font=dict(color='#deb522'))
     fig.update_layout(xaxis=dict(tickmode='array', tickvals=df.index, ticktext=list_names))
     fig.update_layout(yaxis=dict(showticklabels=False))
-    #fig.update_layout(title_font_size = 12 + 2vw)
+    fig.update_layout(title={'y': 0.95, 'pad': {'b': 50}}, title_font_size=title_font_size)
+    fig.update_layout(autosize=True, margin=dict(t=margin))
     return fig
 
 
-def generate_figure_15_most_impacted(street_data_without, street_data_with, traffic_name, traffic_lowercase, list_timeframe_in_seconds, list_timeframe_string, len_time_intervals_string, geo_data, timeframe_from, timeframe_to):
+def generate_figure_15_most_impacted(street_data_without, street_data_with, traffic_name, traffic_lowercase, list_timeframe_in_seconds, list_timeframe_string, len_time_intervals_string, geo_data, timeframe_from, timeframe_to, title_size):
     df_without = street_data_without[street_data_without.columns.intersection(list_timeframe_in_seconds)].copy()
     df_with = street_data_with[street_data_with.columns.intersection(list_timeframe_in_seconds)].copy()
 
@@ -74,15 +82,22 @@ def generate_figure_15_most_impacted(street_data_without, street_data_with, traf
     index_names = df.index.values.tolist()
     list_names = []
     title='15 most impacted streets in terms of ' + traffic_name + ' for the time interval ' + timeframe_from + ' to ' + timeframe_to
-    wrapped_title = textwrap.wrap(title, width=70)
+    wrapped_title = textwrap.wrap(title, width=title_size)
     wrapped_title_with_br = '<br>'.join(wrapped_title)
+    title_font_size = 16
+    margin = 100
+    if title_size == 40:
+        margin = 140
+    if title_size == 30:
+        title_font_size = 12
+        margin = 160
     for elem in index_names:
         for i in geo_data['features']:
             if i["properties"].get("id") == elem:
                 list_names.append(i["properties"].get("name") + ' (id:' + i["properties"].get("id") + ')')
     fig = px.bar(df, y='difference', x=df.index, orientation='v', text='diff_dates',
                  # color='diff_dates',
-                 title=wrapped_title_with_br,
+                 title=wrapped_title_with_br
                  )
     if traffic_lowercase == 'time loss (seconds)' or traffic_lowercase == 'travel time (seconds)' or traffic_lowercase == 'waiting time (seconds)':
         fig.update_traces(texttemplate='%{text}', textposition='outside')
@@ -93,8 +108,8 @@ def generate_figure_15_most_impacted(street_data_without, street_data_with, traf
     fig.update_layout(template='plotly_dark', font=dict(color='#deb522'))
     fig.update_layout(xaxis=dict(tickmode='array', tickvals=df.index, ticktext=list_names, tickangle=90))
     fig.update_layout(yaxis=dict(showticklabels=False))
-    fig.update_layout(title={'y': 0.95, 'pad': {'b': 50}})
-    fig.update_layout(autosize=True, margin=dict(t=120))
+    fig.update_layout(title={'y': 0.95, 'pad': {'b': 50}}, title_font_size=title_font_size)
+    fig.update_layout(autosize=True, margin=dict(t=margin))
     return fig
 
 
