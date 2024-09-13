@@ -3,7 +3,7 @@ import textwrap
 
 
 def generate_visualizations(street_data_without, street_data_with, traffic_3, traffic, list_timeframe_in_seconds,
-                            timeframe_from, timeframe_to, hideout, dict_names):
+                            timeframe_from, timeframe_to, hideout, dict_names, title_size):
     df_without = street_data_without[street_data_without.columns.intersection(list_timeframe_in_seconds)].copy()
     df_with = street_data_with[street_data_with.columns.intersection(list_timeframe_in_seconds)].copy()
 
@@ -15,20 +15,23 @@ def generate_visualizations(street_data_without, street_data_with, traffic_3, tr
         for (key, value) in hideout.items():
             for v in value:
                 my_list.append(v)
-        fig = generate_figure(df_without, df_with, traffic_3, traffic, timeframe_from, timeframe_to, my_list)
+        fig = generate_figure(df_without, df_with, traffic_3, traffic, timeframe_from, timeframe_to, my_list, title_size)
         return fig
     else:
-        fig = generate_figure_all(df_without, df_with, traffic_3, traffic, timeframe_from, timeframe_to)
+        fig = generate_figure_all(df_without, df_with, traffic_3, traffic, timeframe_from, timeframe_to, title_size)
         return fig
 
 
-def generate_figure_all(df_without, df_with, traffic_3, traffic, timeframe_from, timeframe_to):
+def generate_figure_all(df_without, df_with, traffic_3, traffic, timeframe_from, timeframe_to, title_size):
     figures = go.Figure()
     figures.add_trace(go.Histogram(x=df_without['mean'], name="Without deviations"))
     figures.add_trace(go.Histogram(x=df_with['mean'], name="With deviations"))
     title = 'Frequency distribution of the results obtained by the vehicles in terms of ' + traffic_3 + ' for the time interval ' + timeframe_from + ' to ' + timeframe_to
-    wrapped_title = textwrap.wrap(title, width=70)
+    wrapped_title = textwrap.wrap(title, width=title_size)
     wrapped_title_with_br = '<br>'.join(wrapped_title)
+    title_font_size = 16
+    if title_size == 30:
+        title_font_size = 12
     figures.update_layout(
         title_text=wrapped_title_with_br,
         xaxis_title_text=traffic,  # xaxis label
@@ -37,18 +40,22 @@ def generate_figure_all(df_without, df_with, traffic_3, traffic, timeframe_from,
         bargroupgap=0.1  # gap between bars of the same location coordinates
     )
     figures.update_layout(template='plotly_dark', font=dict(color='#deb522'))
+    figures.update_layout(title={'y': 0.95, 'pad': {'b': 50}}, title_font_size=title_font_size)
     return figures
 
 
-def generate_figure(df_without, df_with, traffic_3, traffic, timeframe_from, timeframe_to, my_list):
+def generate_figure(df_without, df_with, traffic_3, traffic, timeframe_from, timeframe_to, my_list, title_size):
     df_without = df_without[df_without.index.isin(my_list)]
     df_with = df_with[df_with.index.isin(my_list)]
     figures = go.Figure()
     figures.add_trace(go.Histogram(x=df_without['mean'], name="Without deviations"))
     figures.add_trace(go.Histogram(x=df_with['mean'], name="With deviations"))
     title = 'Frequency distribution of the results obtained by the vehicles in terms of ' + traffic_3 + ' for the time interval ' + timeframe_from + ' to ' + timeframe_to
-    wrapped_title = textwrap.wrap(title, width=70)
+    wrapped_title = textwrap.wrap(title, width=title_size)
     wrapped_title_with_br = '<br>'.join(wrapped_title)
+    title_font_size = 16
+    if title_size == 30:
+        title_font_size = 12
     figures.update_layout(
         title_text=wrapped_title_with_br,
         xaxis_title_text=traffic,  # xaxis label
@@ -57,6 +64,7 @@ def generate_figure(df_without, df_with, traffic_3, traffic, timeframe_from, tim
         bargroupgap=0.1  # gap between bars of the same location coordinates
     )
     figures.update_layout(template='plotly_dark', font=dict(color='#deb522'))
+    figures.update_layout(title={'y': 0.95, 'pad': {'b': 50}}, title_font_size=title_font_size)
     return figures
 
 
