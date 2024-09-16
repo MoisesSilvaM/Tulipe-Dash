@@ -15,38 +15,21 @@ import webbrowser
 from threading import Timer
 import optparse
 
+
 # --- Initializing the app ---
 dbc_css = "https://cdn.jsdelivr.net/gh/AnnMarieW/dash-bootstrap-templates/dbc.min.css"
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP, dbc_css], title='TrafficTwin')
 server = app.server
 
 
-def initialize_variables():
-    """Load global variables."""
-    # Load inputs
-    dataframe_without, dataframe_with, vehicle_data_without, vehicle_data_with, road_network_json_file = read_inputs()
+# --- Data loading functions ---
 
-    # Generate the list of options for dropdowns, time intervals, and other components
-    time_intervals_seconds = get_time_intervals_seconds()
-    time_intervals_string = get_time_intervals_string()
-    time_intervals_marks = get_time_intervals_marks()
-    len_time_intervals_string = len(time_intervals_string)
+def convert_xml_to_csv(output_file_name, xmlfile):
+    """Convert an XML file to CSV using SUMO tools."""
+    if os.path.exists(xmlfile):
+        os.system(
+            f"python \"{os.path.join(os.environ['SUMO_HOME'], 'tools', 'xml', 'xml2csv.py')}\" {xmlfile} -o {output_file_name}")
 
-    closed_roads = ["231483314", "832488061", "616545123", "150276002", "8384928", "606127853", "4730627", "4726710#0",
-                    "627916937", "4726681#0"]  # This list has to come from the App (for now I left it like this)
-    url = 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png'
-    attribution = '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> '
-    dict_names = {}
-    return dataframe_without, dataframe_with, vehicle_data_without, vehicle_data_with, road_network_json_file, time_intervals_seconds, time_intervals_string, time_intervals_marks, len_time_intervals_string, closed_roads, url, attribution, dict_names
-
-
-# --- Initialize the global variables ---
-(dataframe_without, dataframe_with, vehicle_data_without, vehicle_data_with, road_network_json_file,
- time_intervals_seconds, time_intervals_string, time_intervals_marks, len_time_intervals_string, closed_roads, url,
- attribution, dict_names) = initialize_variables
-
-
-# --- Data loading functions ---z
 def load_data(xmlfile, dataframe):
     """Convert XML to CSV and load data into a DataFrame."""
     file_name = 'edgedata.out.csv'
@@ -68,125 +51,7 @@ def sort_data(dataframe):
     return dataframe.sort_values(by=['interval_begin', 'edge_id'], ignore_index=True)
 
 
-# --- Utility functions ---
-
-def Color_scale():
-    """Return a predefined color scale for the map plot."""
-    return ["#0F9D58", "#fff757", "#fbbc09", "#E94335", "#822F2B"]
-
-
-def convert_xml_to_csv(output_file_name, xmlfile):
-    """Convert an XML file to CSV using SUMO tools."""
-    if os.path.exists(xmlfile):
-        os.system(
-            f"python \"{os.path.join(os.environ['SUMO_HOME'], 'tools', 'xml', 'xml2csv.py')}\" {xmlfile} -o {output_file_name}")
-
-
-def read_geojson(file_path):
-    """Read and return GeoJSON data from a file."""
-    with open(file_path, encoding='utf-8') as f:
-        return geojson.load(f)
-
-
-def read_geojson_diff():
-    """Read and return GeoJSON data from map_plot_diff file."""
-    with open('map_plot_diff.geojson', encoding='utf-8') as f:
-        return geojson.load(f)
-
-
-def define_quantile(data_diff):
-    """Return quantile intervals for the given data."""
-    p1 = data_diff.quantile(q=0.25)
-    p2 = data_diff.quantile(q=0.45)
-    p3 = data_diff.quantile(q=0.65)
-    p4 = data_diff.quantile(q=0.85)
-    return [data_diff.min(), p1, p2, p3, p4, data_diff.max()]
-
-
-def load_street_data(traffic):
-    """Load and align street data for traffic without and with deviations."""
-    df_without = detectors_out_to_table(dataframe_without, traffic).fillna(0)
-    df_with = detectors_out_to_table(dataframe_with, traffic).fillna(0)
-    return df_without.align(df_with, fill_value=0)
-
-
-def open_browser():
-    webbrowser.open_new("http://localhost:{}".format(8050))
-
-
-def generate_options_list():
-    options_list = []
-    if 'edge_traveltime' in dataframe_without.columns:
-        options_list.append('Travel time (seconds)')
-    if 'edge_density' in dataframe_without.columns:
-        options_list.append('Density (vehicles/kilometres)')
-    if 'edge_occupancy' in dataframe_without.columns:
-        options_list.append('Occupancy (%)')
-    if 'edge_timeLoss' in dataframe_without.columns:
-        options_list.append('Time loss (seconds)')
-    if 'edge_waitingTime' in dataframe_without.columns:
-        options_list.append('Waiting time (seconds)')
-    if 'edge_speed' in dataframe_without.columns:
-        options_list.append('Speed (meters/seconds)')
-    if 'edge_speedRelative' in dataframe_without.columns:
-        options_list.append('Speed relative (average speed / speed limit)')
-    if 'edge_sampledSeconds' in dataframe_without.columns:
-        options_list.append('Sampled seconds (vehicles/seconds)')
-    return options_list
-
-
-# --- Time Interval functions ---
-
-def get_from_time_intervals_string(time_intervals_seconds):
-    """Extract the 'from' time from a list of time intervals."""
-    interval_time = re.split(" to ", time_intervals_seconds[0])
-    return interval_time[0]
-
-
-def get_to_time_intervals_string(time_intervals_seconds):
-    """Extract the 'to' time from a list of time intervals."""
-    interval_time = re.split(" to ", time_intervals_seconds[-1])
-    return interval_time[1]
-
-
-def get_time_intervals_string():
-    """Convert time intervals from seconds to human-readable format."""
-    intervals = get_time_intervals_seconds()
-    return [
-        f"{str(datetime.timedelta(seconds=int(re.split('_to_', interval)[0])))} to "
-        f"{str(datetime.timedelta(seconds=int(re.split('_to_', interval)[1])))}"
-        for interval in intervals
-    ]
-
-
-def get_time_intervals_marks():
-    """Return time interval marks for a slider input."""
-    time_intervals_seconds = get_time_intervals_seconds()
-    time_intervals_marks = [
-        str(datetime.timedelta(seconds=int(re.split("_to_", elem)[0])))
-        for elem in time_intervals_seconds
-    ]
-    last_interval_end = str(datetime.timedelta(seconds=int(re.split("_to_", time_intervals_seconds[-1])[1])))
-    time_intervals_marks.append(last_interval_end)
-    return time_intervals_marks
-
-
-def get_time_intervals_seconds():
-    """Return unique time intervals from the data."""
-    return dataframe_without['interval_id'].unique()
-
-
-def selected_timeframe_in_seconds(timeframe_split):
-    """Convert a human-readable time split (hh:mm:ss) into total seconds.."""
-    h1, m1, s1 = timeframe_split[0].split(':')
-    starting = int(datetime.timedelta(hours=int(h1), minutes=int(m1), seconds=int(s1)).total_seconds())
-    h2, m2, s2 = timeframe_split[2].split(':')
-    end = int(datetime.timedelta(hours=int(h2), minutes=int(m2), seconds=int(s2)).total_seconds())
-    return str(starting) + "_to_" + str(end)
-
-
 # --- Input function ---
-
 def read_inputs():
     """Read command-line inputs and load datasets for analysis."""
     parser = optparse.OptionParser()
@@ -225,10 +90,136 @@ def read_inputs():
     vehicle_data_without = load_vehicles_data(xml_tripinfo_without)
     vehicle_data_with = load_vehicles_data(xml_tripinfo_with)
 
-    return dataframe_without, dataframe_with, vehicle_data_without, vehicle_data_with, road_network_json_file
+    closed_roads = ["231483314", "832488061", "616545123", "150276002", "8384928", "606127853", "4730627", "4726710#0",
+                    "627916937", "4726681#0"]  # This list has to come from the App (for now I left it like this)
+    dict_names = {}
+
+    return dataframe_without, dataframe_with, vehicle_data_without, vehicle_data_with, road_network_json_file, closed_roads, dict_names
 
 
-# Generate options for the dropdown
+# --- Defining global variables ---
+dataframe_without, dataframe_with, vehicle_data_without, vehicle_data_with, road_network_json_file, closed_roads, dict_names = read_inputs()
+url = 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png'
+attribution = '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> '
+
+# --- Global time functions ---
+def get_time_intervals_seconds():
+    """Return unique time intervals from the data."""
+    return dataframe_without['interval_id'].unique()
+
+
+def get_time_intervals_string():
+    """Convert time intervals from seconds to human-readable format."""
+    intervals = get_time_intervals_seconds()
+    return [
+        f"{str(datetime.timedelta(seconds=int(re.split('_to_', interval)[0])))} to "
+        f"{str(datetime.timedelta(seconds=int(re.split('_to_', interval)[1])))}"
+        for interval in intervals]
+
+
+def get_time_intervals_marks():
+    """Return time interval marks for a slider input."""
+    time_intervals_seconds = get_time_intervals_seconds()
+    time_intervals_marks = [
+        str(datetime.timedelta(seconds=int(re.split("_to_", elem)[0])))
+        for elem in time_intervals_seconds
+    ]
+    last_interval_end = str(datetime.timedelta(seconds=int(re.split("_to_", time_intervals_seconds[-1])[1])))
+    time_intervals_marks.append(last_interval_end)
+    return time_intervals_marks
+
+
+# --- Define global time variables ---
+time_intervals_seconds = get_time_intervals_seconds()
+time_intervals_string = get_time_intervals_string()
+time_intervals_marks = get_time_intervals_marks()
+len_time_intervals_string = len(time_intervals_string)
+
+
+# --- Utility functions ---
+
+def Color_scale():
+    """Return a predefined color scale for the map plot."""
+    return ["#0F9D58", "#fff757", "#fbbc09", "#E94335", "#822F2B"]
+
+
+def read_geojson():
+    """Read and return GeoJSON data from a file."""
+    with open(road_network_json_file, encoding='utf-8') as f:
+        return geojson.load(f)
+
+
+def read_geojson_diff():
+    """Read and return GeoJSON data from map_plot_diff file."""
+    with open('map_plot_diff.geojson', encoding='utf-8') as f:
+        return geojson.load(f)
+
+
+def define_quantile(data_diff):
+    """Return quantile intervals for the given data."""
+    p1 = data_diff.quantile(q=0.25)
+    p2 = data_diff.quantile(q=0.45)
+    p3 = data_diff.quantile(q=0.65)
+    p4 = data_diff.quantile(q=0.85)
+    return [data_diff.min(), p1, p2, p3, p4, data_diff.max()]
+
+
+def load_street_data(traffic):
+    """Load and align street data for traffic without and with deviations."""
+    df_without = detectors_out_to_table(dataframe_without, traffic).fillna(0)
+    df_with = detectors_out_to_table(dataframe_with, traffic).fillna(0)
+    return df_without.align(df_with, fill_value=0)
+
+
+def open_browser():
+    webbrowser.open_new("http://localhost:{}".format(8050))
+
+
+# --- Time Interval functions ---
+
+def get_from_time_intervals_string(time_intervals_seconds):
+    """Extract the 'from' time from a list of time intervals."""
+    interval_time = re.split(" to ", time_intervals_seconds[0])
+    return interval_time[0]
+
+
+def get_to_time_intervals_string(time_intervals_seconds):
+    """Extract the 'to' time from a list of time intervals."""
+    interval_time = re.split(" to ", time_intervals_seconds[-1])
+    return interval_time[1]
+
+
+def selected_timeframe_in_seconds(timeframe_split):
+    """Convert a human-readable time split (hh:mm:ss) into total seconds.."""
+    h1, m1, s1 = timeframe_split[0].split(':')
+    starting = int(datetime.timedelta(hours=int(h1), minutes=int(m1), seconds=int(s1)).total_seconds())
+    h2, m2, s2 = timeframe_split[2].split(':')
+    end = int(datetime.timedelta(hours=int(h2), minutes=int(m2), seconds=int(s2)).total_seconds())
+    return str(starting) + "_to_" + str(end)
+
+
+# -- Generate options for the dropdown --
+def generate_options_list():
+    options_list = []
+    if 'edge_traveltime' in dataframe_without.columns:
+        options_list.append('Travel time (seconds)')
+    if 'edge_density' in dataframe_without.columns:
+        options_list.append('Density (vehicles/kilometres)')
+    if 'edge_occupancy' in dataframe_without.columns:
+        options_list.append('Occupancy (%)')
+    if 'edge_timeLoss' in dataframe_without.columns:
+        options_list.append('Time loss (seconds)')
+    if 'edge_waitingTime' in dataframe_without.columns:
+        options_list.append('Waiting time (seconds)')
+    if 'edge_speed' in dataframe_without.columns:
+        options_list.append('Speed (meters/seconds)')
+    if 'edge_speedRelative' in dataframe_without.columns:
+        options_list.append('Speed relative (average speed / speed limit)')
+    if 'edge_sampledSeconds' in dataframe_without.columns:
+        options_list.append('Sampled seconds (vehicles/seconds)')
+    return options_list
+
+
 dropdown_options = [{'label': title, 'value': title} for title in generate_options_list()]
 dropdown_options_vehicles = [{'label': title, 'value': title} for title in
                              ['Duration (seconds)', 'Route length (meters)', 'Time loss (seconds)',
@@ -403,6 +394,7 @@ app.layout = html.Div([
         ])
     ], style={'backgroundColor': 'black', 'padding': '0px'})
 ], style={'backgroundColor': 'black', 'minHeight': '100vh'})
+
 
 # --- Callback functions ---
 
