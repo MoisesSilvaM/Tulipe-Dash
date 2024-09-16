@@ -6,8 +6,13 @@ from dash_extensions.javascript import assign
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 import os
+import matplotlib.pyplot as plt
+
 
 def detectors_out_to_table(sim_data_df, field_name):
+    """Converts simulation data into a table format where each row corresponds
+        to a time interval and each column corresponds to an edge ID.
+        The table contains traffic indicator data for each edge."""
     # parse all the intervals in the edgedata file
     traffic_indicator = "edge_" + field_name
     time_intervals = sim_data_df['interval_id'].unique()
@@ -27,6 +32,8 @@ def detectors_out_to_table(sim_data_df, field_name):
 
 
 def map_to_geojson(tulipe_geojson_file, edgedata_without, edgedata_with, interval, traffic_indicator):
+    """Generate GeoJSON files with street-level differences in traffic indicators
+        between two datasets (with and without deviations)."""
     net_gdf = gpd.read_file(tulipe_geojson_file)
     net_gdf['index'] = net_gdf['id']
     net_gdf = net_gdf.set_index('index')
@@ -39,12 +46,39 @@ def map_to_geojson(tulipe_geojson_file, edgedata_without, edgedata_with, interva
 
     diff = np.subtract(street_data_without, street_data_with)
     absolute_values = diff.abs()
-
     df_data = net_gdf.join(absolute_values).fillna(0)
     df_data.to_file('map_plot_diff.geojson')
-    return absolute_values
+    return absolute_values, df_data
 
 
+def export_png(df_data, colorscale, classes, traffic_indicator):
+    """Export a visual map of traffic data with a color scale as a PNG image."""
+    df_data['color'] = df_data[traffic_indicator].apply(assign_color, args=(classes, colorscale))
+    fig, ax = plt.subplots(figsize=(10, 10))
+    df_data.plot(ax=ax, color=df_data['color'], linewidth=2)
+    ax.set_axis_off()
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+    plt.savefig('output_image_transparent.png', dpi=1000, bbox_inches='tight', pad_inches=0, transparent=True)
+    plt.close()
+
+
+def assign_color(value, list_intervals, color_scale):
+    """Assign a color to a given value based on predefined quantile intervals."""
+    if value <= list_intervals[1]:
+        return color_scale[0]
+    elif value <= list_intervals[2]:
+        return color_scale[1]
+    elif value <= list_intervals[3]:
+        return color_scale[2]
+    elif value <= list_intervals[4]:
+        return color_scale[3]
+    else:
+        return color_scale[4]
+
+
+# --- Style Definitions ---
+
+# Styles for the tabs in the application
 tab_style = {
     'idle': {
         'borderRadius': '10px',
@@ -71,6 +105,10 @@ tab_style = {
     }
 }
 
+
+# --- JavaScript Assign Functions for Map Styling ---
+
+# Color styling for the map when a street is selected
 style_color = assign("""function(feature, context){
     const {selected} = context.hideout;
     if(selected.includes(feature.properties.id)){   
@@ -79,6 +117,8 @@ style_color = assign("""function(feature, context){
     return {fillColor: '#1a73e8', color: '#1a73e8'}
 }""")
 
+
+# Color styling for closed streets on the map
 style_color_closed = assign("""function(feature, context)
 {
     const {colorscale, classes, colorProp, closed} = context.hideout;
@@ -97,10 +137,14 @@ style_color_closed = assign("""function(feature, context)
 }
 """)
 
+
+# Tooltips for displaying street information when hovering over a feature
 on_each_feature = assign("""function(feature, layer, context){
     layer.bindTooltip(`${feature.properties.name} (id:${feature.properties.id})`)
 }""")
 
+
+# Tooltips for displaying information about closed streets
 on_each_feature_closed = assign("""function(feature, layer, context){
     const {colorProp, tname, closed} = context.hideout;
     if(closed.includes(feature.properties.id)){   
@@ -111,6 +155,10 @@ on_each_feature_closed = assign("""function(feature, layer, context){
     }
 }""")
 
+
+# --- Modal Content ---
+
+# Information about the team and the project
 modal_body = html.Div([
     html.Br(),
     html.B("Team: "), "Moisés Silva-Muñoz | Davide Andrea Guastella | Gianluca Bontempi",
@@ -126,6 +174,8 @@ modal_body = html.Div([
     ])
 ])
 
+
+# Descriptions of traffic indicators for the modal
 traffic_body = html.Div([
     html.B("Traveltime: "), "Time in seconds needed to pass the street.",
     html.Br(),
@@ -149,6 +199,8 @@ traffic_body = html.Div([
     html.B("RouteLength: "), "The average route length.",
 ])
 
+
+# Button to collapse the closed streets section
 collapse_button = html.Div(
     [
         dbc.Button(
@@ -158,7 +210,10 @@ collapse_button = html.Div(
 )
 
 
+# --- Utility Functions for Traffic and Vehicle Data ---
+
 def get_veh_traffic(traffic):
+    """Return a human-readable description of the selected vehicle traffic indicator."""
     value = ''
     if traffic == 'Duration (seconds)':
         value = 'duration of the trip (seconds) '
@@ -170,7 +225,9 @@ def get_veh_traffic(traffic):
         value = 'waiting time (seconds)'
     return value
 
+
 def get_veh_explanation(traffic):
+    """Return a detailed explanation of the selected vehicle traffic indicator."""
     value = ''
     if traffic == 'Duration (seconds)':
         value = 'duration of the trips of the vehicles (seconds) '
@@ -182,7 +239,9 @@ def get_veh_explanation(traffic):
         value = 'waiting time of the vehicles (seconds)'
     return value
 
+
 def get_vehicle_name(traffic):
+    """Return the internal field name for the selected vehicle traffic indicator."""
     vehicle_df = ''
     if traffic == "Duration (seconds)":
         vehicle_df = "duration"
@@ -196,6 +255,7 @@ def get_vehicle_name(traffic):
 
 
 def get_traffic_lowercase(traffic):
+    """Return a lowercase description of the selected traffic indicator."""
     traffic_df = ''
     if traffic == "Density (vehicles/kilometres)":
         traffic_df = "density (vehicles/kilometres)"
@@ -217,6 +277,7 @@ def get_traffic_lowercase(traffic):
 
 
 def get_traffic_name(traffic):
+    """Return the internal field name for the selected traffic indicator."""
     traffic_df = ''
     if traffic == "Density (vehicles/kilometres)":
         traffic_df = "density"
@@ -238,6 +299,7 @@ def get_traffic_name(traffic):
 
 
 def get_traffic(traffic):
+    """Return a human-readable description of the selected traffic indicator."""
     inf = ''
     if traffic == "Density (vehicles/kilometres)":
         inf = "vehicle density (vehicles/kilometres)"
@@ -256,6 +318,3 @@ def get_traffic(traffic):
     elif traffic == "Sampled seconds (vehicles/seconds)":
         inf = "sampled seconds (vehicles/seconds) of the vehicles"
     return inf
-
-
-
