@@ -50,6 +50,9 @@ def generate_figure(street_data_without, street_data_with, traffic_name, traffic
     else:
         df['diff_dates'] = df['difference'].apply(get_copy_sec)
 
+    # Sort the selected streets
+    df = df.sort_values(by=['diff_dates'], ascending=False)
+
     index_names = df.index.values.tolist()
     list_names = []
 
@@ -68,7 +71,7 @@ def generate_figure(street_data_without, street_data_with, traffic_name, traffic
                 list_names.append(i["properties"].get("name") + ' (id:' + i["properties"].get("id") + ')')
 
     # generate bar plot
-    fig = px.bar(df, y='difference', x=df.index, orientation='v', text='diff_dates',
+    fig = px.bar(df, y='diff_dates', x=df.index, orientation='v', text='diff_dates',
                  # color='diff_dates',
                  title=wrapped_title)
     if traffic_lowercase == 'time loss (seconds)' or traffic_lowercase == 'travel time (seconds)' or traffic_lowercase == 'waiting time (seconds)':
@@ -131,7 +134,7 @@ def generate_figure_15_most_impacted(street_data_without, street_data_with, traf
                 list_names.append(i["properties"].get("name") + ' (id:' + i["properties"].get("id") + ')')
 
     # generate bar plot
-    fig = px.bar(df, y='difference', x=df.index, orientation='v', text='diff_dates',
+    fig = px.bar(df, y='diff_dates', x=df.index, orientation='v', text='diff_dates',
                  # color='diff_dates',
                  title=wrapped_title
                  )
@@ -165,7 +168,7 @@ def get_sec_to_date(seconds):
 
 def get_copy_sec(seconds):
     """Return the seconds value as is for non-time-based metrics."""
-    return seconds
+    return abs(seconds)
 
 
 def get_traffic_y_axis(traffic):
